@@ -3,3 +3,7 @@
 !PLAN.md
 
 **/data
+/backend/**/target
+
+.**
+!.gitignore
