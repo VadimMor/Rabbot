@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # 1. СУБД PostgreSQL с поддержкой векторных эмбеддингов pgvector
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: rabbot-postgres
+    environment:
+      POSTGRES_USER: rabbot
+      POSTGRES_PASSWORD: rabbot
+      POSTGRES_DB: rabbot
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - rabbot-network
+    restart:
+      always
+  
+  # 2. Брокер сообщений RabbitMQ с веб-панелью управления
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbot-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbot
+      RABBITMQ_DEFAULT_PASS: rabbot
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    networks:
+      - rabbot-network
+    restart:
+      always
+    
+  # 3. Кэш и сессии Redis
+  redis:
+    image: redis:7-alpine
+    container_name: rabbot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - rabbot-network
+    restart:
+      always
+
+volumes:
+  data-postgres:
+  data-rabbitmq:
+  data-redis:
+
+networks:
+  rabbot-network:
+    driver: bridge
