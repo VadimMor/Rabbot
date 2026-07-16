@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.util.List;
 import lombok.Data;
 
+import com.rabbot.auth.Enum.RoleUser;
+
 @Entity
 @Table(name = "users")
 @Data
@@ -19,10 +21,14 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String role; // Например: "ROLE_USER", "ROLE_ADMIN"
+    private RoleUser role = RoleUser.ROLE_USER;
 
     // Связь: Один пользователь может владеть несколькими Workspaces
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Workspace> workspaces;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<LoginHistory> loginHistories;
 }
