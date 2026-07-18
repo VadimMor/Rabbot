@@ -1,8 +1,9 @@
 package com.rabbot.auth.controller;
 
-import com.rabbot.auth.dto.request.AuthResponse;
 import com.rabbot.auth.dto.request.LoginRequest;
+import com.rabbot.auth.dto.request.RefreshTokenRequest;
 import com.rabbot.auth.dto.request.RegisterRequest;
+import com.rabbot.auth.dto.response.AuthResponse;
 import com.rabbot.auth.service.AuthenticationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,5 +27,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authenticationService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken) {
+        return ResponseEntity.ok(authenticationService.refreshToken(refreshToken));
     }
 }

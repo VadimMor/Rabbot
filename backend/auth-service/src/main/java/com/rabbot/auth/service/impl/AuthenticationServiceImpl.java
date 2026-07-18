@@ -1,21 +1,29 @@
 package com.rabbot.auth.service.impl;
 
-import com.rabbot.auth.dto.request.AuthResponse;
 import com.rabbot.auth.dto.request.LoginRequest;
+import com.rabbot.auth.dto.request.RefreshTokenRequest;
 import com.rabbot.auth.dto.request.RegisterRequest;
+import com.rabbot.auth.dto.response.AuthResponse;
+
 import com.rabbot.auth.Enum.RoleUser;
 import com.rabbot.auth.model.User;
+
 import com.rabbot.auth.repository.UserRepository;
-import com.rabbot.auth.service.AuthenticationService;
-import com.rabbot.auth.service.JwtService;
+
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.rabbot.auth.service.AuthenticationService;
+import com.rabbot.auth.service.JwtService;
+
 @Service
 @RequiredArgsConstructor
+@Data
 public class AuthenticationServiceImpl implements AuthenticationService {
 
+    private final JwtServiceImpl jwtServiceImpl;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -28,7 +36,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         var user = new User();
         user.setEmail(request.getEmail());
-        // Хэшируем пароль перед сохранением в БД
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(RoleUser.ROLE_USER);
 
@@ -48,7 +55,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Неверный email или пароль"));
 
-        // Проверяем, совпадает ли сырой пароль из запроса с хэшем из базы
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Неверный email или пароль");
         }
@@ -62,5 +68,29 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    @Override
+    public AuthResponse refreshToken(RefreshTokenRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        String email = jwtService.extractEmail(refreshToken);
+
+        if (email != null) {
+            var user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+
+            if (jwtService.isTokenValid(refreshToken, user)) {
+                var newAccessToken = jwtService.generateToken(user);
+                var newRefreshToken = jwtService.generateRefreshToken(user);
+
+                return AuthResponse.builder()
+                        .accessToken(newAccessToken)
+                        .refreshToken(newRefreshToken)
+                        .build();
+            }
+        }
+
+        throw new IllegalArgumentException("Невалидный или просроченный Refresh-токен");
     }
 }

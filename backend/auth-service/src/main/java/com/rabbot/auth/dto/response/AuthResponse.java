@@ -1,4 +1,4 @@
-package com.rabbot.auth.dto.request;
+package com.rabbot.auth.dto.response;
 
 import lombok.Builder;
 import lombok.Data;

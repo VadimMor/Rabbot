@@ -10,7 +10,7 @@ spring:
     password: rabbot
   jpa:
     hibernate:
-      ddl-auto: update # Spring сам создаст таблицы на основе Java-классов
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
