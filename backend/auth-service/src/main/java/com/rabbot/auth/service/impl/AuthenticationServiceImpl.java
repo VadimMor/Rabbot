@@ -14,9 +14,12 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.rabbot.auth.service.AuthenticationService;
 import com.rabbot.auth.service.JwtService;
+import com.rabbot.auth.service.LoginHistory;
+import com.rabbot.auth.Enum.LoginStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginHistory loginHistory;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
@@ -51,18 +55,23 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public AuthResponse login(LoginRequest request) {
-        var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Неверный email или пароль"));
+    public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
+        var user = userRepository.findByEmail(request.getEmail());
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (user.isEmpty()) {
+            loginHistory.saveLoginAttempt(request.getEmail(), null, httpRequest, LoginStatus.FAILED_USER_NOT_FOUND);
             throw new IllegalArgumentException("Неверный email или пароль");
         }
 
-        // TODO: В будущем добавим сюда сохранение в LoginHistoryRepository
+        if (!passwordEncoder.matches(request.getPassword(), user.get().getPassword())) {
+            loginHistory.saveLoginAttempt(request.getEmail(), null, httpRequest, LoginStatus.FAILED_BAD_CREDENTIALS);
+            throw new IllegalArgumentException("Неверный email или пароль");
+        }
 
-        var accessToken = jwtService.generateToken(user);
-        var refreshToken = jwtService.generateRefreshToken(user);
+        loginHistory.saveLoginAttempt(request.getEmail(), user.get(), httpRequest, LoginStatus.SUCCESS);
+
+        var accessToken = jwtService.generateToken(user.get());
+        var refreshToken = jwtService.generateRefreshToken(user.get());
 
         return AuthResponse.builder()
                 .accessToken(accessToken)

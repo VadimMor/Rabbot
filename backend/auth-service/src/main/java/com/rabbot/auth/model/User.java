@@ -30,5 +30,5 @@ public class User {
     private List<Workspace> workspaces;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<LoginHistory> loginHistories;
+    private List<LoginHistoryModel> loginHistories;
 }

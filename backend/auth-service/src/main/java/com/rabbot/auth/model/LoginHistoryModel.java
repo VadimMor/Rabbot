@@ -14,7 +14,7 @@ import com.rabbot.auth.Enum.LoginStatus;
 @Entity
 @Table(name = "login_history")
 @EntityListeners(AuditingEntityListener.class)
-public class LoginHistory {
+public class LoginHistoryModel {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
