@@ -2,6 +2,8 @@ package com.rabbot.auth.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.annotation.CreatedDate;
@@ -26,7 +28,8 @@ public class LoginHistoryModel {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    @Lazy
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User user;
 
     @Column(name = "ip_address", length = 45)

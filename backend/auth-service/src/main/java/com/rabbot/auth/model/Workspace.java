@@ -2,6 +2,8 @@ package com.rabbot.auth.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -21,5 +23,7 @@ public class Workspace {
     // Владелец этого рабочего пространства
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User owner;
 }
