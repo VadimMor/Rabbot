@@ -3,6 +3,7 @@ package com.rabbot.auth.model;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -25,6 +26,7 @@ public class LoginHistoryModel {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
+    @Lazy
     private User user;
 
     @Column(name = "ip_address", length = 45)

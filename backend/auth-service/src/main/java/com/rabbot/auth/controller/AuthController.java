@@ -11,6 +11,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.service.annotation.PatchExchange;
+import com.rabbot.auth.Enum.StatusUser;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -41,5 +46,11 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refreshToken(@RequestBody RefreshTokenRequest refreshToken) {
         return ResponseEntity.ok(authenticationService.refreshToken(refreshToken));
+    }
+
+    @PutMapping("/change-user")
+    public ResponseEntity<?> changeUser(@RequestParam Integer userId, @RequestParam StatusUser newStatus) {
+        authenticationService.changeUser(userId, newStatus);
+        return ResponseEntity.ok().build();
     }
 }

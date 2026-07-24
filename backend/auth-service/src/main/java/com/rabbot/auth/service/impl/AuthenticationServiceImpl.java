@@ -20,6 +20,8 @@ import com.rabbot.auth.service.AuthenticationService;
 import com.rabbot.auth.service.JwtService;
 import com.rabbot.auth.service.LoginHistory;
 import com.rabbot.auth.Enum.LoginStatus;
+import com.rabbot.auth.Enum.StatusUser;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +44,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(RoleUser.ROLE_USER);
+        user.setStatus(StatusUser.ACTIVE);
 
         var savedUser = userRepository.save(user);
 
@@ -101,5 +104,15 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         throw new IllegalArgumentException("Невалидный или просроченный Refresh-токен");
+    }
+
+    @Override
+    @Transactional
+    public void changeUser(Integer userId, StatusUser newStatus) {
+        User user = userRepository.findById(userId.longValue())
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь с ID " + userId + " не найден"));
+
+        user.setStatus(newStatus);
+        userRepository.save(user);
     }
 }
