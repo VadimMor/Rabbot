@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.rabbot.auth.Enum.SortEnum;
 import com.rabbot.auth.dto.request.WorkspaceRequest;
@@ -29,6 +30,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
 
     private final JwtService jwtService;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     public String createWorkspace(WorkspaceRequest workspaceRequest) {
@@ -41,7 +43,11 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspace.setOwner(currentUser);
 
         workspaceRepository.save(workspace);
-        return "Workspace created successfully";
+        
+        String redisKey = "user:" + currentUser.getEmail() + ":workspaces";
+        redisTemplate.opsForSet().add(redisKey, String.valueOf(workspace.getId()));
+
+        return "Workspace created successfully with ID: " + workspace.getId();
     }
 
     @Override
