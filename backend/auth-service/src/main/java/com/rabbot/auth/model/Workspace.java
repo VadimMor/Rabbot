@@ -1,5 +1,7 @@
 package com.rabbot.auth.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,6 +21,9 @@ public class Workspace {
 
     @Column(length = 500)
     private String description;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     // Владелец этого рабочего пространства
     @ManyToOne(fetch = FetchType.LAZY)
