@@ -74,4 +74,21 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             .build()
         );
     }
+
+    @Override
+    public void warmUpUserCache(User user) {
+        String redisKey = "user:" + user.getEmail() + ":workspaces";
+        
+        List<Long> workspaceIds = workspaceRepository.findAllWorkspaceIdsByOwnerId(user.getId());
+        
+        redisTemplate.delete(redisKey);
+        
+        if (workspaceIds != null && !workspaceIds.isEmpty()) {
+            String[] strIds = workspaceIds.stream()
+                                          .map(String::valueOf)
+                                          .toArray(String[]::new);
+            
+            redisTemplate.opsForSet().add(redisKey, strIds);
+        }
+    }
 }

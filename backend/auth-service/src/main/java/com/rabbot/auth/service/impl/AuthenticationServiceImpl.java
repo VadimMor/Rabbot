@@ -12,6 +12,8 @@ import com.rabbot.auth.repository.UserRepository;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +25,8 @@ import com.rabbot.auth.Enum.LoginStatus;
 import com.rabbot.auth.Enum.StatusUser;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rabbot.auth.service.WorkspaceService;
+
 @Service
 @RequiredArgsConstructor
 @Data
@@ -33,6 +37,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final LoginHistory loginHistory;
+    private final WorkspaceService workspaceService;
 
     @Override
     public AuthResponse register(RegisterRequest request) {
@@ -72,6 +77,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
 
         loginHistory.saveLoginAttempt(request.getEmail(), user.get(), httpRequest, LoginStatus.SUCCESS);
+
+        workspaceService.warmUpUserCache(user.get());
 
         var accessToken = jwtService.generateToken(user.get());
         var refreshToken = jwtService.generateRefreshToken(user.get());
