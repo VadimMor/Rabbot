@@ -1,3 +1,9 @@
 **/*.md
 !README.md
 !PLAN.md
+
+**/data
+/backend/**/target
+
+.**
+!.gitignore

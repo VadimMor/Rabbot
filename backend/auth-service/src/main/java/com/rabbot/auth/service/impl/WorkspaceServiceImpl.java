@@ -1,0 +1,94 @@
+package com.rabbot.auth.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import com.rabbot.auth.Enum.SortEnum;
+import com.rabbot.auth.dto.request.WorkspaceRequest;
+import com.rabbot.auth.dto.response.WorkspaceResponse;
+import com.rabbot.auth.model.User;
+import com.rabbot.auth.model.Workspace;
+import com.rabbot.auth.repository.WorkspaceRepository;
+import com.rabbot.auth.service.JwtService;
+import com.rabbot.auth.service.WorkspaceService;
+
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Data
+public class WorkspaceServiceImpl implements WorkspaceService {
+    private final WorkspaceRepository workspaceRepository;
+
+    private final JwtService jwtService;
+    private final StringRedisTemplate redisTemplate;
+
+    @Override
+    public String createWorkspace(WorkspaceRequest workspaceRequest) {
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        Workspace workspace = new Workspace();
+        workspace.setName(workspaceRequest.getName());
+        workspace.setDescription(workspaceRequest.getDescription());
+
+        workspace.setOwner(currentUser);
+
+        workspaceRepository.save(workspace);
+        
+        String redisKey = "user:" + currentUser.getEmail() + ":workspaces";
+        redisTemplate.opsForSet().add(redisKey, String.valueOf(workspace.getId()));
+
+        return "Workspace created successfully with ID: " + workspace.getId();
+    }
+
+    @Override
+    public Page<WorkspaceResponse> getAll(Integer page, SortEnum sort) {
+        User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+
+        Sort springSort = (sort == SortEnum.SORT_NAME) 
+                ? Sort.by(Sort.Direction.ASC, "name") 
+                : Sort.by(Sort.Direction.DESC, "createdAt");
+
+        Pageable pageable = PageRequest.of(page, 10, springSort);
+        
+        Page<Workspace> workspacesPage = workspaceRepository.findAllByOwnerId(
+            currentUser.getId(),
+            pageable
+        );
+        
+        return workspacesPage.map(workspace -> WorkspaceResponse.builder()
+            .id(workspace.getId())
+            .name(workspace.getName())
+            .description(workspace.getDescription())
+            .createdAt(workspace.getCreatedAt())
+            .build()
+        );
+    }
+
+    @Override
+    public void warmUpUserCache(User user) {
+        String redisKey = "user:" + user.getEmail() + ":workspaces";
+        
+        List<Long> workspaceIds = workspaceRepository.findAllWorkspaceIdsByOwnerId(user.getId());
+        
+        redisTemplate.delete(redisKey);
+        
+        if (workspaceIds != null && !workspaceIds.isEmpty()) {
+            String[] strIds = workspaceIds.stream()
+                                          .map(String::valueOf)
+                                          .toArray(String[]::new);
+            
+            redisTemplate.opsForSet().add(redisKey, strIds);
+        }
+    }
+}
