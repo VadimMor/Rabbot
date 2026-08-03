@@ -7,7 +7,14 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: dummy-route
-          uri: http://localhost:8080
+        - id: auth-service-public
+          uri: http://localhost:8081
           predicates:
-            - Path=/dummy/**
+            - Path=/api/auth/**
+            
+        - id: auth-service-secured
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/workspace/**
+          filters:
+            - JwtAuthenticationFilter
