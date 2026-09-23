@@ -50,6 +50,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                 String email = jwtUtil.extractEmail(authHeader);
 
                 ServerHttpRequest mutatedRequest = request.mutate()
+                        .headers(httpHeaders -> httpHeaders.remove("X-User-Email"))
                         .header("X-User-Email", email)
                         .build();
                 

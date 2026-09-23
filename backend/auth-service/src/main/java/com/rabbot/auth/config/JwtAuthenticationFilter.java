@@ -2,7 +2,6 @@ package com.rabbot.auth.config;
 
 import com.rabbot.auth.model.User;
 import com.rabbot.auth.repository.UserRepository;
-import com.rabbot.auth.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,7 +21,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
     private final UserRepository userRepository;
 
     @Override
