@@ -2,7 +2,6 @@ package com.rabbot.auth.config;
 
 import com.rabbot.auth.model.User;
 import com.rabbot.auth.repository.UserRepository;
-import com.rabbot.auth.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,7 +21,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
     private final UserRepository userRepository;
 
     @Override
@@ -32,22 +30,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
         
-        final String authHeader = request.getHeader("Authorization");
+        final String userEmail = request.getHeader("X-User-Email");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        try {
-            final String jwt = authHeader.substring(7);
-            final String userEmail = jwtService.extractEmail(jwt);
-
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
                 User user = userRepository.findByEmail(userEmail).orElse(null);
 
-                if (user != null && jwtService.isTokenValid(jwt, user)) {
-                    
+                if (user != null) {
+                    // 3. Просто кладем пользователя в контекст Spring Security
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             user,
                             null,
@@ -55,9 +45,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     );
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
+            } catch (Exception e) {
+                System.err.println("Ошибка безопасности: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Ошибка валидации JWT: " + e.getMessage());
         }
         
         // Передаем запрос дальше по цепочке

@@ -20,6 +20,7 @@ import com.rabbot.auth.repository.WorkspaceRepository;
 import com.rabbot.auth.service.JwtService;
 import com.rabbot.auth.service.WorkspaceService;
 
+import jakarta.transaction.Transactional;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -33,6 +34,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final StringRedisTemplate redisTemplate;
 
     @Override
+    @Transactional
     public String createWorkspace(WorkspaceRequest workspaceRequest) {
         User currentUser = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
