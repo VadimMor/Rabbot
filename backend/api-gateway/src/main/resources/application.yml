@@ -11,6 +11,7 @@ spring:
           uri: http://localhost:8081
           predicates:
             - Path=/api/auth/**
+            - Path=/api/content/**
             
         - id: auth-service-secured
           uri: http://localhost:8081

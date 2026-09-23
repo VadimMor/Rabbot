@@ -20,6 +20,7 @@
     <modules>
         <module>api-gateway</module>
         <module>auth-service</module>
+        <module>content-service</module>
     </modules>
 
     <properties>
