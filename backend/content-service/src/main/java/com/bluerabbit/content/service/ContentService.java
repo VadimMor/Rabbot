@@ -9,6 +9,4 @@ public interface ContentService {
     DraftResponse createDraft(Long workspaceId, DraftRequest request);
 
     List<DraftResponse> getAllDraftsByWorkspace(Long workspaceId);
-
-    DraftResponse mapToResponse(Long draftId, Long workspaceId);
 }

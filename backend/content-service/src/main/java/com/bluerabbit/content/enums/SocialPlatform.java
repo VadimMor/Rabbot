@@ -1,4 +1,4 @@
-package com.bluerabbit.content.model.enums;
+package com.bluerabbit.content.enums;
 
 public enum SocialPlatform {
     INSTAGRAM,
