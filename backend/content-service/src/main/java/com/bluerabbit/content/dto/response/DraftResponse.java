@@ -11,7 +11,7 @@ import java.util.List;
 public class DraftResponse {
     private Long id;
     private String textContent;
-    private List<SocialPlatform> targetPlatforms;
+    private List<String> targetPlatforms;
     private String status;
     private LocalDateTime scheduledTime;
     private LocalDateTime createdAt;

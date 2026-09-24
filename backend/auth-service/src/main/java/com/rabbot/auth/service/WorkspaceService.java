@@ -7,6 +7,7 @@ import com.rabbot.auth.dto.request.WorkspaceRequest;
 import com.rabbot.auth.dto.response.WorkspaceResponse;
 
 import com.rabbot.auth.model.User;
+
 public interface WorkspaceService {
     String createWorkspace(WorkspaceRequest workspaceRequest);
 

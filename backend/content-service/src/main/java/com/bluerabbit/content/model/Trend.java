@@ -7,7 +7,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.util.List;
 
-import com.bluerabbit.content.model.enums.SocialPlatform;
+import com.bluerabbit.content.enums.SocialPlatform;
 
 
 @Entity

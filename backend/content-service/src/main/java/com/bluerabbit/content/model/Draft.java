@@ -3,8 +3,13 @@ package com.bluerabbit.content.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import com.bluerabbit.content.enums.DraftStatus;
+import com.bluerabbit.content.enums.SocialPlatform;
 
 @Entity
 @Table(name = "drafts")
@@ -21,8 +26,10 @@ public class Draft {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String textContent;
 
-    @Column(name = "target_platforms")
-    private String targetPlatforms;
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "target_platforms", columnDefinition = "text[]")
+    private List<SocialPlatform> targetPlatforms;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
