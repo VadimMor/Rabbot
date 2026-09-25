@@ -23,12 +23,15 @@ public class HeaderAuthFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain
     ) throws ServletException, IOException {
 
+        // Читаем заголовок, который установил API Gateway после проверки JWT
         String userEmail = request.getHeader("X-User-Email");
 
         if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            // Создаем минимальный контекст. 
+            // Если заголовок есть, доверяем Gateway и авторизуем запрос
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    userEmail, null, Collections.emptyList()
+                    userEmail, 
+                    null, 
+                    Collections.emptyList()
             );
             SecurityContextHolder.getContext().setAuthentication(authToken);
         }
