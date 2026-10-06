@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Rabbot (local)",
+      "Group": "Rabbot",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "rabbot",
+      "Username": "rabbot_migrator",
+      "SSLMode": "prefer"
+    }
+  }
+}

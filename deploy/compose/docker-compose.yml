@@ -1,0 +1,196 @@
+# Rabbot — локальная инфраструктура для разработки.
+#
+# Запуск (из корня репозитория):
+#   cp deploy/compose/.env.example deploy/compose/.env
+#   docker compose -f deploy/compose/docker-compose.yml up -d
+# С инструментами (Kafka UI, pgAdmin):
+#   docker compose -f deploy/compose/docker-compose.yml --profile tools up -d
+
+name: rabbot
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  # ---------------------------------------------------------------- PostgreSQL
+  postgres:
+    <<: *restart
+    image: postgres:17-alpine
+    container_name: rabbot-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD in .env}
+      POSTGRES_DB: postgres
+      RABBOT_MIGRATOR_PASSWORD: ${RABBOT_MIGRATOR_PASSWORD:?set RABBOT_MIGRATOR_PASSWORD in .env}
+      RABBOT_APP_PASSWORD: ${RABBOT_APP_PASSWORD:?set RABBOT_APP_PASSWORD in .env}
+      TZ: UTC
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - wal_level=logical
+      - -c
+      - timezone=UTC
+      - -c
+      - log_min_duration_statement=250
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rabbot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  # ---------------------------------------------------------------- Миграции
+  flyway:
+    image: flyway/flyway:11
+    container_name: rabbot-flyway
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/rabbot
+      FLYWAY_USER: rabbot_migrator
+      FLYWAY_PASSWORD: ${RABBOT_MIGRATOR_PASSWORD}
+      FLYWAY_SCHEMAS: core
+      FLYWAY_DEFAULT_SCHEMA: core
+      FLYWAY_CREATE_SCHEMAS: "false"
+      FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-filesystem:/flyway/sql,filesystem:/flyway/seed}
+      FLYWAY_CONNECT_RETRIES: 10
+      FLYWAY_VALIDATE_MIGRATION_NAMING: "true"
+    volumes:
+      - ../../db/migration:/flyway/sql:ro
+      - ../../db/seed:/flyway/seed:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------------------------------------------------------------- Redis
+  redis:
+    <<: *restart
+    image: redis:7.4-alpine
+    container_name: rabbot-redis
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}", "--maxmemory", "384mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  # ---------------------------------------------------------------- Kafka (KRaft, один узел)
+  kafka:
+    <<: *restart
+    image: apache/kafka:4.0.0
+    container_name: rabbot-kafka
+    environment:
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:?set KAFKA_CLUSTER_ID in .env}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:${KAFKA_EXTERNAL_PORT:-29092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_NUM_PARTITIONS: 6
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xms512m -Xmx1g
+    ports:
+      - "${KAFKA_EXTERNAL_PORT:-29092}:29092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1536m
+
+  # Создание топиков (одноразовый контейнер)
+  kafka-init:
+    image: apache/kafka:4.0.0
+    container_name: rabbot-kafka-init
+    entrypoint: ["/bin/bash", "/scripts/create-topics.sh"]
+    environment:
+      BOOTSTRAP: kafka:9092
+    volumes:
+      - ./kafka/create-topics.sh:/scripts/create-topics.sh:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------------------------------------------------------------- Инструменты (profile: tools)
+  kafka-ui:
+    <<: *restart
+    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: rabbot-kafka-ui
+    profiles: ["tools"]
+    environment:
+      KAFKA_CLUSTERS_0_NAME: rabbot-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      - "${KAFKA_UI_PORT:-8085}:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  pgadmin:
+    <<: *restart
+    image: dpage/pgadmin4:9
+    container_name: rabbot-pgadmin
+    profiles: ["tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@rabbot.dev}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?set PGADMIN_PASSWORD in .env}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pg-data:
+  redis-data:
+  kafka-data:
+  pgadmin-data:
