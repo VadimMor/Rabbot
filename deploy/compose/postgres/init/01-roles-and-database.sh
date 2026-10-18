@@ -8,21 +8,21 @@ set -euo pipefail
 # Создание ролей и базы данных
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
   -v migrator_pw="$RABBOT_MIGRATOR_PASSWORD" -v app_pw="$RABBOT_APP_PASSWORD" <<'EOSQL'
-# Создание роли rabbot_migrator с правами на вход и паролем из переменной окружения RABBOT_MIGRATOR_PASSWORD.
+-- Создание роли rabbot_migrator с правами на вход и паролем из переменной окружения RABBOT_MIGRATOR_PASSWORD.
 CREATE ROLE rabbot_migrator LOGIN PASSWORD :'migrator_pw';
-# Создание роли rabbot_app с правами на вход и паролем из переменной окружения RABBOT_APP_PASSWORD.
+-- Создание роли rabbot_app с правами на вход и паролем из переменной окружения RABBOT_APP_PASSWORD.
 CREATE ROLE rabbot_app      LOGIN PASSWORD :'app_pw';
-# Создание базы данных rabbot с владельцем rabbot_migrator.
+-- Создание базы данных rabbot с владельцем rabbot_migrator.
 CREATE DATABASE rabbot OWNER rabbot_migrator;
 EOSQL
 
 # Создание схемы core и предоставление прав роли rabbot_app
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname rabbot <<'EOSQL'
-# Запрет доступа к схеме public и базе данных rabbot для всех пользователей (PUBLIC).
+-- Запрет доступа к схеме public и базе данных rabbot для всех пользователей (PUBLIC).
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-# Запрет подключения к базе данных rabbot для всех пользователей (PUBLIC).
+-- Запрет подключения к базе данных rabbot для всех пользователей (PUBLIC).
 REVOKE ALL ON DATABASE rabbot FROM PUBLIC;
-# Предоставление роли rabbot_app права на подключение к базе данных rabbot.
+-- Предоставление роли rabbot_app права на подключение к базе данных rabbot.
 GRANT CONNECT ON DATABASE rabbot TO rabbot_app;
 
 # Создание расширения pg_stat_statements для сбора статистики выполнения запросов.
