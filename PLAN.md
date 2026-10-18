@@ -4,9 +4,9 @@
 
 - [ ] Kubernetes-кластер (k3s) с поддержкой GPU
 - [ ] Argo CD
-- [ ] Kafka
-- [ ] PostgreSQL
-- [ ] ClickHouse
+- [x] Kafka
+- [x] PostgreSQL
+- [x] ClickHouse
 - [ ] Qdrant
 - [ ] Redis
 - [ ] MinIO
@@ -16,7 +16,7 @@
 - [ ] Prometheus, Grafana, Loki, Tempo, OpenTelemetry Collector
 - [ ] Langfuse
 - [ ] vLLM и TEI
-- [ ] Docker Compose для локальной разработки
+- [x] Docker Compose для локальной разработки
 - [ ] CI в GitHub Actions
 
 ## Этап 2. Каркас приложения
@@ -26,7 +26,7 @@
 - [ ] Библиотека transactional outbox
 - [ ] Библиотека безопасности (OIDC, tenant)
 - [ ] Сервисы: gateway, api, ingestor, enricher, generator, llm-gateway, scheduler, publisher, analytics
-- [ ] Модель данных и миграции Flyway
+- [x] Модель данных и миграции Flyway
 - [ ] Helm-чарт
 - [ ] Frontend: React + Vite + SCSS, дизайн-токены, layout, вход через Keycloak
 
