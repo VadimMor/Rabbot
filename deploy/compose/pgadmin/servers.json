@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Rabbot (local)",
+      "Group": "Rabbot",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "rabbot",
+      "Username": "rabbot_migrator",
+      "SSLMode": "prefer",
+      "Comment": "Локальная БД Rabbot из docker compose. Host = имя сервиса postgres в сети compose."
+    }
+  }
+}
