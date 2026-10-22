@@ -12,7 +12,7 @@ spring:
       enabled: true
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/rabbot
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/rabbot
     # Сервис работает под ролью приложения: только SELECT/INSERT/UPDATE/DELETE.
     # Схему меняет только Flyway (rabbot_migrator).
     username: rabbot_app
