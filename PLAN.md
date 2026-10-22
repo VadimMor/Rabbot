@@ -21,7 +21,7 @@
 
 ## Этап 2. Каркас приложения
 
-- [ ] Gradle multi-project
+- [x] Gradle multi-project
 - [ ] Библиотека контрактов событий
 - [ ] Библиотека transactional outbox
 - [ ] Библиотека безопасности (OIDC, tenant)
