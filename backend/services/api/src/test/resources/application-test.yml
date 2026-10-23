@@ -1,0 +1,13 @@
+# Профиль "test": дополняет основной application.yml.
+# Адрес, логин и пароль БД подставит Testcontainers (@ServiceConnection),
+# поэтому datasource здесь не указываем.
+spring:
+  flyway:
+    enabled: true
+    # Тесты запускаются из папки backend/services/api,
+    # три уровня вверх - корень репозитория с db/migration.
+    locations: filesystem:../../../db/migration
+    # Создать схему core и класть всё туда, как в docker compose.
+    schemas: core
+    default-schema: core
+    create-schemas: true

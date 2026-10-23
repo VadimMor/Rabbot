@@ -35,10 +35,27 @@ dependencies {
     // JDBC-драйвер PostgreSQL нужен только во время работы.
     runtimeOnly("org.postgresql:postgresql")
 
+    // ---------- тесты ----------
+    // JUnit 5, AssertJ, Mockito, JsonPath.
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    // MockMvc: HTTP-запросы к контроллерам без настоящего сетевого порта.
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    // Связка Spring Boot + Testcontainers (@ServiceConnection).
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
+    // Flyway только в тестах: накатить миграции на чистую базу в контейнере.
+    // В основном коде его нет — там схему меняет отдельный контейнер flyway.
+    testImplementation("org.springframework.boot:spring-boot-starter-flyway")
+    testImplementation("org.flywaydb:flyway-database-postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.test {
     useJUnitPlatform()
+    // Печатать в консоль каждый тест и полный текст ошибок.
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
