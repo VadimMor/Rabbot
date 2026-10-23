@@ -29,7 +29,6 @@ erDiagram
     tenant {
         uuid id PK
         citext slug UK
-        text plan
     }
     app_user {
         uuid id PK
