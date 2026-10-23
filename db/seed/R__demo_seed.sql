@@ -3,8 +3,8 @@
 -- Идемпотентна: фиксированные id + ON CONFLICT DO NOTHING.
 
 -- Тенант
-INSERT INTO tenant (id, slug, name, plan, plan_expires_at, status)
-VALUES ('00000000-0000-0000-0000-000000000001', 'rabbot-coffee', 'Rabbot Coffee', 'PRO', '2026-12-12', 'ACTIVE')
+INSERT INTO tenant (id, slug, name, status)
+VALUES ('00000000-0000-0000-0000-000000000001', 'rabbot-coffee', 'Rabbot Coffee', 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
 -- Пользователи
