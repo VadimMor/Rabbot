@@ -20,11 +20,16 @@ import org.hibernate.generator.EventType;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
 
 import dev.rabbot.api.enums.PostKind;
 import dev.rabbot.api.enums.PostStatus;
+import dev.rabbot.api.utils.ConflictException;
+
+import dev.rabbot.api.enums.SocialPlatform;
 
 // Пост бренда (таблица core.post). Владеет своими вариантами.
 @Entity
@@ -117,4 +122,57 @@ public class Post {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<PostVariant> getVariants() { return variants; }
+
+    // В каких статусах пост ещё можно редактировать.
+    // После одобрения и публикации текст менять нельзя.
+    private static final Set<PostStatus> EDITABLE =
+            EnumSet.of(PostStatus.DRAFT, PostStatus.IN_REVIEW, PostStatus.CHANGES_REQUESTED);
+
+        // Новый пост — всегда черновик.
+    public Post(Brand brand, PostKind kind, String title, UUID trendId) {
+        this.tenantId = brand.getTenantId();
+        this.brand = brand;
+        this.kind = kind;
+        this.title = title;
+        this.trendId = trendId;
+        this.status = PostStatus.DRAFT;
+    }
+
+    // ---------- бизнес-методы ----------
+
+    public boolean isEditable() {
+        return EDITABLE.contains(status);
+    }
+
+    // Бросает 409, если пост нельзя менять в текущем статусе.
+    public void requireEditable() {
+        if (!isEditable()) {
+            throw new ConflictException("Пост в статусе " + status + " редактировать нельзя");
+        }
+    }
+
+    public void rename(String newTitle) {
+        requireEditable();
+        this.title = newTitle;
+    }
+
+    // Добавить вариант. Номер считается сам: следующий для этой площадки.
+    // Первый вариант площадки сразу выбирается для публикации.
+    public PostVariant addVariant(SocialPlatform platform, String body, List<String> hashtags) {
+        requireEditable();
+
+        int nextNo = variants.stream()
+                .filter(v -> v.getPlatform() == platform)
+                .mapToInt(PostVariant::getVariantNo)
+                .max()
+                .orElse(0) + 1;
+
+        boolean hasSelected = variants.stream()
+                .anyMatch(v -> v.getPlatform() == platform && v.isSelected());
+
+        PostVariant variant = new PostVariant(this, platform, nextNo, body, hashtags, !hasSelected);
+        // Добавляем в список: благодаря cascade = ALL вариант сохранится вместе с постом.
+        variants.add(variant);
+        return variant;
+    }
 }

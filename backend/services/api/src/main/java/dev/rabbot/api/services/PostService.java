@@ -1,5 +1,7 @@
 package dev.rabbot.api.services;
 
+import dev.rabbot.api.dto.request.PostCreateRequest;
+import dev.rabbot.api.dto.request.PostUpdateRequest;
 import dev.rabbot.api.dto.response.PageResponse;
 import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.PostSummaryResponse;
@@ -14,4 +16,8 @@ public interface PostService {
                                                   PostStatus status, int page, int size);
 
     PostResponse get(UUID tenantId, UUID id);
+
+    PostResponse create(UUID tenantId, UUID brandId, PostCreateRequest request);
+
+    PostResponse update(UUID tenantId, UUID id, PostUpdateRequest request);
 }

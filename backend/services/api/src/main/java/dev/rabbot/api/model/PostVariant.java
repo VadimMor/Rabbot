@@ -97,4 +97,17 @@ public class PostVariant {
     public String getFinalModel() { return finalModel; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    // Создаётся только через Post.addVariant(): пост сам решает номер и выбор.
+    // Поэтому конструктор package-private (без public).
+    PostVariant(Post post, SocialPlatform platform, int variantNo,
+                String body, List<String> hashtags, boolean selected) {
+        this.tenantId = post.getTenantId();
+        this.post = post;
+        this.platform = platform;
+        this.variantNo = variantNo;
+        this.body = body;
+        this.hashtags = hashtags == null ? new ArrayList<>() : new ArrayList<>(hashtags);
+        this.selected = selected;
+    }
 }

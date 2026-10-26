@@ -1,13 +1,18 @@
 package dev.rabbot.api.services.impl;
 
+import dev.rabbot.api.dto.request.PostCreateRequest;
+import dev.rabbot.api.dto.request.PostUpdateRequest;
+import dev.rabbot.api.dto.request.VariantRequest;
 import dev.rabbot.api.dto.response.PageResponse;
 import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.PostSummaryResponse;
+import dev.rabbot.api.model.Brand;
 import dev.rabbot.api.model.Post;
 import dev.rabbot.api.enums.PostStatus;
 import dev.rabbot.api.repository.BrandRepository;
 import dev.rabbot.api.repository.PostRepository;
 import dev.rabbot.api.services.PostService;
+import dev.rabbot.api.utils.ConflictException;
 import dev.rabbot.api.utils.NotFoundException;
 import dev.rabbot.api.utils.PostMapper;
 import org.springframework.data.domain.Page;
@@ -56,5 +61,48 @@ public class PostServiceImpl implements PostService {
         Post post = postRepository.findWithVariantsByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Пост " + id + " не найден"));
         return postMapper.toResponse(post);
+    }
+
+    @Override
+    @Transactional
+    public PostResponse create(UUID tenantId, UUID brandId, PostCreateRequest request) {
+        // Бренд нужен целиком: из него берём tenantId для поста.
+        Brand brand = brandRepository.findByIdAndTenantId(brandId, tenantId)
+                .orElseThrow(() -> new NotFoundException("Бренд " + brandId + " не найден"));
+
+        Post post = new Post(brand, request.kind(), request.title().strip(), request.trendId());
+
+        if (request.variants() != null) {
+            for (VariantRequest v : request.variants()) {
+                post.addVariant(v.platform(), v.body(), v.hashtags());
+            }
+        }
+
+        // Один save: варианты сохранятся каскадом (cascade = ALL).
+        // flush — чтобы БД вернула created_at, char_count и т. п. до ответа.
+        Post saved = postRepository.saveAndFlush(post);
+        return postMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public PostResponse update(UUID tenantId, UUID id, PostUpdateRequest request) {
+        Post post = findWithVariantsOrThrow(tenantId, id);
+
+        // Клиент видел старую версию → кто-то уже изменил пост → 409.
+        // Это ловит конфликт "открыл давно, сохранил сейчас".
+        // Одновременную гонку двух запросов поймает сам @Version при UPDATE.
+        if (post.getVersion() != request.version()) {
+            throw new ConflictException("Пост уже изменён (версия " + post.getVersion()
+                    + "). Обновите страницу и повторите.");
+        }
+
+        post.rename(request.title().strip());
+        return postMapper.toResponse(postRepository.saveAndFlush(post));
+    }
+
+    private Post findWithVariantsOrThrow(UUID tenantId, UUID id) {
+        return postRepository.findWithVariantsByIdAndTenantId(id, tenantId)
+                .orElseThrow(() -> new NotFoundException("Пост " + id + " не найден"));
     }
 }
