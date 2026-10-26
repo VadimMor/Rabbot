@@ -24,4 +24,7 @@ public interface BrandRepository extends JpaRepository<Brand, UUID> {
 
     // То же, но не считая сам изменяемый бренд (для обновления).
     boolean existsByTenantIdAndNameAndIdNot(UUID tenantId, String name, UUID id);
+
+    // Принадлежит ли бренд организации (без загрузки самого бренда).
+    boolean existsByIdAndTenantId(UUID id, UUID tenantId);
 }
