@@ -35,6 +35,17 @@ public class PostController {
         this.postService = postService;
     }
 
+    // GET /api/v1/brands/{brandId}/posts?status=IN_REVIEW&page=0&size=20
+    @GetMapping("/brands/{brandId}/posts")
+    public PageResponse<PostSummaryResponse> listByBrand(
+            @CurrentTenant UUID tenantId,
+            @PathVariable UUID brandId,
+            @RequestParam(required = false) PostStatus status,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
+        return postService.listByBrand(tenantId, brandId, status, page, size);
+    }
+
     @GetMapping("/posts/{id}")
     public PostResponse get(@CurrentTenant UUID tenantId, @PathVariable UUID id) {
         return postService.get(tenantId, id);
