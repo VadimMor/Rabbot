@@ -191,8 +191,10 @@ public class PostServiceImpl implements PostService {
     // Записать всё в БД и перечитать пост: так в ответе будут свежие
     // updated_at (триггер), char_count (GENERATED) и порядок вариантов (@OrderBy).
     private PostResponse saveAndReload(Post post) {
+        UUID tenantId = post.getTenantId();
+        UUID id = post.getId();
         entityManager.flush();
-        entityManager.refresh(post);
-        return postMapper.toResponse(post);
+        entityManager.clear();
+        return postMapper.toResponse(findWithVariantsOrThrow(tenantId, id));
     }
 }
