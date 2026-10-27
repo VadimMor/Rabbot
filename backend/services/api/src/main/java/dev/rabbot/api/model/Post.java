@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
+import dev.rabbot.api.utils.NotFoundException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -174,5 +175,45 @@ public class Post {
         // Добавляем в список: благодаря cascade = ALL вариант сохранится вместе с постом.
         variants.add(variant);
         return variant;
+    }
+    
+        // Найти вариант этого поста. Чужой id (даже существующий) → 404.
+    public PostVariant findVariant(UUID variantId) {
+        return variants.stream()
+                .filter(v -> v.getId().equals(variantId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Вариант " + variantId + " не найден"));
+    }
+
+    public void editVariant(PostVariant variant, String body, List<String> hashtags) {
+        requireEditable();
+        variant.edit(body, hashtags);
+    }
+
+    // Снять выбор со всех вариантов площадки (шаг 1 из 2 при смене выбора).
+    public void unselectPlatform(SocialPlatform platform) {
+        requireEditable();
+        variants.stream()
+                .filter(v -> v.getPlatform() == platform)
+                .forEach(PostVariant::unselect);
+    }
+
+    // Выбрать вариант (шаг 2 из 2). Вызывать после unselectPlatform + flush.
+    public void selectVariant(PostVariant variant) {
+        requireEditable();
+        variant.select();
+    }
+
+    // Удалить вариант. orphanRemoval = true → Hibernate сам сделает DELETE.
+    public void removeVariant(PostVariant variant) {
+        requireEditable();
+        variants.remove(variant);
+    }
+
+    // Вариант площадки с наименьшим номером — кандидат на выбор после удаления выбранного.
+    public java.util.Optional<PostVariant> firstVariantOf(SocialPlatform platform) {
+        return variants.stream()
+                .filter(v -> v.getPlatform() == platform)
+                .min(java.util.Comparator.comparingInt(PostVariant::getVariantNo));
     }
 }

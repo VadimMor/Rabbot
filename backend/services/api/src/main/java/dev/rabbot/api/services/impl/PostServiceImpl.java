@@ -3,18 +3,24 @@ package dev.rabbot.api.services.impl;
 import dev.rabbot.api.dto.request.PostCreateRequest;
 import dev.rabbot.api.dto.request.PostUpdateRequest;
 import dev.rabbot.api.dto.request.VariantRequest;
+import dev.rabbot.api.dto.request.VariantTextRequest;
 import dev.rabbot.api.dto.response.PageResponse;
 import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.PostSummaryResponse;
 import dev.rabbot.api.model.Brand;
 import dev.rabbot.api.model.Post;
+import dev.rabbot.api.model.PostVariant;
 import dev.rabbot.api.enums.PostStatus;
+import dev.rabbot.api.enums.SocialPlatform;
 import dev.rabbot.api.repository.BrandRepository;
 import dev.rabbot.api.repository.PostRepository;
 import dev.rabbot.api.services.PostService;
 import dev.rabbot.api.utils.ConflictException;
 import dev.rabbot.api.utils.NotFoundException;
 import dev.rabbot.api.utils.PostMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -30,13 +36,16 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final BrandRepository brandRepository;
     private final PostMapper postMapper;
+    private final EntityManager entityManager;
 
     public PostServiceImpl(PostRepository postRepository,
                            BrandRepository brandRepository,
-                           PostMapper postMapper) {
+                           PostMapper postMapper,
+                           EntityManager entityManager) {
         this.postRepository = postRepository;
         this.brandRepository = brandRepository;
         this.postMapper = postMapper;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -104,5 +113,86 @@ public class PostServiceImpl implements PostService {
     private Post findWithVariantsOrThrow(UUID tenantId, UUID id) {
         return postRepository.findWithVariantsByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new NotFoundException("Пост " + id + " не найден"));
+    }
+
+        @Override
+    @Transactional
+    public PostResponse addVariant(UUID tenantId, UUID postId, int version, VariantRequest request) {
+        Post post = loadForChange(tenantId, postId, version);
+        post.addVariant(request.platform(), request.body(), request.hashtags());
+        return saveAndReload(post);
+    }
+
+    @Override
+    @Transactional
+    public PostResponse editVariant(UUID tenantId, UUID postId, UUID variantId, int version,
+                                    VariantTextRequest request) {
+        Post post = loadForChange(tenantId, postId, version);
+        PostVariant variant = post.findVariant(variantId);
+        post.editVariant(variant, request.body(), request.hashtags());
+        return saveAndReload(post);
+    }
+
+    @Override
+    @Transactional
+    public PostResponse selectVariant(UUID tenantId, UUID postId, UUID variantId, int version) {
+        Post post = loadForChange(tenantId, postId, version);
+        PostVariant variant = post.findVariant(variantId);
+
+        if (!variant.isSelected()) {
+            // Шаг 1: снять старый выбор и сразу записать в БД.
+            post.unselectPlatform(variant.getPlatform());
+            entityManager.flush();
+            // Шаг 2: выбрать новый. Теперь уникальный индекс не сработает.
+            post.selectVariant(variant);
+        }
+        return saveAndReload(post);
+    }
+
+    @Override
+    @Transactional
+    public PostResponse deleteVariant(UUID tenantId, UUID postId, UUID variantId, int version) {
+        Post post = loadForChange(tenantId, postId, version);
+        PostVariant variant = post.findVariant(variantId);
+        SocialPlatform platform = variant.getPlatform();
+        boolean wasSelected = variant.isSelected();
+
+        post.removeVariant(variant);
+        // DELETE сейчас — до того, как выберем замену.
+        entityManager.flush();
+
+        // Удалили выбранный — выбираем оставшийся вариант с наименьшим номером,
+        // чтобы у площадки не пропал текст для публикации.
+        if (wasSelected) {
+            post.firstVariantOf(platform).ifPresent(post::selectVariant);
+        }
+        return saveAndReload(post);
+    }
+
+    // ---------- помощники ----------
+
+    // Загрузить пост для изменения вариантов:
+    //  1) проверить, что клиент видел актуальную версию;
+    //  2) проверить, что пост можно редактировать;
+    //  3) поднять version поста сразу (UPDATE post SET version = version + 1 ...).
+    //     PESSIMISTIC — ещё и блокирует строку поста до конца транзакции,
+    //     так что второй редактор подождёт, а не перезапишет.
+    private Post loadForChange(UUID tenantId, UUID postId, int version) {
+        Post post = findWithVariantsOrThrow(tenantId, postId);
+        if (post.getVersion() != version) {
+            throw new ConflictException("Пост уже изменён (версия " + post.getVersion()
+                    + "). Обновите страницу и повторите.");
+        }
+        post.requireEditable();
+        entityManager.lock(post, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
+        return post;
+    }
+
+    // Записать всё в БД и перечитать пост: так в ответе будут свежие
+    // updated_at (триггер), char_count (GENERATED) и порядок вариантов (@OrderBy).
+    private PostResponse saveAndReload(Post post) {
+        entityManager.flush();
+        entityManager.refresh(post);
+        return postMapper.toResponse(post);
     }
 }
