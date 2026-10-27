@@ -37,15 +37,18 @@ public class PostServiceImpl implements PostService {
     private final BrandRepository brandRepository;
     private final PostMapper postMapper;
     private final EntityManager entityManager;
+    private final PostLoader postLoader;
 
     public PostServiceImpl(PostRepository postRepository,
                            BrandRepository brandRepository,
                            PostMapper postMapper,
-                           EntityManager entityManager) {
+                           EntityManager entityManager,
+                           PostLoader postLoader) {
         this.postRepository = postRepository;
         this.brandRepository = brandRepository;
         this.postMapper = postMapper;
         this.entityManager = entityManager;
+        this.postLoader = postLoader;
     }
 
     @Override
@@ -96,7 +99,7 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public PostResponse update(UUID tenantId, UUID id, PostUpdateRequest request) {
-        Post post = findWithVariantsOrThrow(tenantId, id);
+        Post post = postLoader.loadChecked(tenantId, id, request.version());
 
         // Клиент видел старую версию → кто-то уже изменил пост → 409.
         // Это ловит конфликт "открыл давно, сохранил сейчас".
@@ -110,17 +113,12 @@ public class PostServiceImpl implements PostService {
         return postMapper.toResponse(postRepository.saveAndFlush(post));
     }
 
-    private Post findWithVariantsOrThrow(UUID tenantId, UUID id) {
-        return postRepository.findWithVariantsByIdAndTenantId(id, tenantId)
-                .orElseThrow(() -> new NotFoundException("Пост " + id + " не найден"));
-    }
-
         @Override
     @Transactional
     public PostResponse addVariant(UUID tenantId, UUID postId, int version, VariantRequest request) {
         Post post = loadForChange(tenantId, postId, version);
         post.addVariant(request.platform(), request.body(), request.hashtags());
-        return saveAndReload(post);
+        return postLoader.saveAndReload(post);
     }
 
     @Override
@@ -130,7 +128,7 @@ public class PostServiceImpl implements PostService {
         Post post = loadForChange(tenantId, postId, version);
         PostVariant variant = post.findVariant(variantId);
         post.editVariant(variant, request.body(), request.hashtags());
-        return saveAndReload(post);
+        return postLoader.saveAndReload(post);
     }
 
     @Override
@@ -146,7 +144,7 @@ public class PostServiceImpl implements PostService {
             // Шаг 2: выбрать новый. Теперь уникальный индекс не сработает.
             post.selectVariant(variant);
         }
-        return saveAndReload(post);
+        return postLoader.saveAndReload(post);
     }
 
     @Override
@@ -166,35 +164,14 @@ public class PostServiceImpl implements PostService {
         if (wasSelected) {
             post.firstVariantOf(platform).ifPresent(post::selectVariant);
         }
-        return saveAndReload(post);
+        return postLoader.saveAndReload(post);
     }
 
     // ---------- помощники ----------
-
-    // Загрузить пост для изменения вариантов:
-    //  1) проверить, что клиент видел актуальную версию;
-    //  2) проверить, что пост можно редактировать;
-    //  3) поднять version поста сразу (UPDATE post SET version = version + 1 ...).
-    //     PESSIMISTIC — ещё и блокирует строку поста до конца транзакции,
-    //     так что второй редактор подождёт, а не перезапишет.
     private Post loadForChange(UUID tenantId, UUID postId, int version) {
-        Post post = findWithVariantsOrThrow(tenantId, postId);
-        if (post.getVersion() != version) {
-            throw new ConflictException("Пост уже изменён (версия " + post.getVersion()
-                    + "). Обновите страницу и повторите.");
-        }
+        Post post = postLoader.loadChecked(tenantId, postId, version);
         post.requireEditable();
         entityManager.lock(post, LockModeType.PESSIMISTIC_FORCE_INCREMENT);
         return post;
-    }
-
-    // Записать всё в БД и перечитать пост: так в ответе будут свежие
-    // updated_at (триггер), char_count (GENERATED) и порядок вариантов (@OrderBy).
-    private PostResponse saveAndReload(Post post) {
-        UUID tenantId = post.getTenantId();
-        UUID id = post.getId();
-        entityManager.flush();
-        entityManager.clear();
-        return postMapper.toResponse(findWithVariantsOrThrow(tenantId, id));
     }
 }
