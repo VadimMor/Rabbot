@@ -2,6 +2,8 @@ package dev.rabbot.api.services;
 
 import dev.rabbot.api.dto.request.PostCreateRequest;
 import dev.rabbot.api.dto.request.PostUpdateRequest;
+import dev.rabbot.api.dto.request.VariantRequest;
+import dev.rabbot.api.dto.request.VariantTextRequest;
 import dev.rabbot.api.dto.response.PageResponse;
 import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.PostSummaryResponse;
@@ -20,4 +22,12 @@ public interface PostService {
     PostResponse create(UUID tenantId, UUID brandId, PostCreateRequest request);
 
     PostResponse update(UUID tenantId, UUID id, PostUpdateRequest request);
+
+    PostResponse addVariant(UUID tenantId, UUID postId, int version, VariantRequest request);
+
+    PostResponse editVariant(UUID tenantId, UUID postId, UUID variantId, int version, VariantTextRequest request);
+
+    PostResponse selectVariant(UUID tenantId, UUID postId, UUID variantId, int version);
+
+    PostResponse deleteVariant(UUID tenantId, UUID postId, UUID variantId, int version);
 }

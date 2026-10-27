@@ -110,4 +110,17 @@ public class PostVariant {
         this.hashtags = hashtags == null ? new ArrayList<>() : new ArrayList<>(hashtags);
         this.selected = selected;
     }
+
+    void edit(String newBody, List<String> newHashtags) {
+        this.body = newBody;
+        this.hashtags = newHashtags == null ? new ArrayList<>() : new ArrayList<>(newHashtags);
+    }
+
+    void select() {
+        this.selected = true;
+    }
+
+    void unselect() {
+        this.selected = false;
+    }
 }

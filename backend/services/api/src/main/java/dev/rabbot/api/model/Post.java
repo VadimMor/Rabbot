@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import org.hibernate.annotations.Generated;
 import org.hibernate.generator.EventType;
+import dev.rabbot.api.utils.NotFoundException;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,6 +25,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.Set;
+import java.util.Map;
 
 import dev.rabbot.api.enums.PostKind;
 import dev.rabbot.api.enums.PostStatus;
@@ -123,6 +125,19 @@ public class Post {
     public Instant getUpdatedAt() { return updatedAt; }
     public List<PostVariant> getVariants() { return variants; }
 
+    // Разрешённые переходы статусов, которые делает пользователь через API.
+    // Статусов, которых нет в ключах (GENERATING, SCHEDULED, ARCHIVED),
+    // пользователь покинуть не может — их меняют другие сервисы или они конечные.
+    private static final Map<PostStatus, Set<PostStatus>> TRANSITIONS = Map.of(
+            PostStatus.DRAFT, EnumSet.of(PostStatus.IN_REVIEW, PostStatus.ARCHIVED),
+            PostStatus.IN_REVIEW, EnumSet.of(PostStatus.APPROVED, PostStatus.CHANGES_REQUESTED, PostStatus.ARCHIVED),
+            PostStatus.CHANGES_REQUESTED, EnumSet.of(PostStatus.IN_REVIEW, PostStatus.ARCHIVED),
+            PostStatus.APPROVED, EnumSet.of(PostStatus.ARCHIVED),
+            PostStatus.PUBLISHED, EnumSet.of(PostStatus.ARCHIVED),
+            PostStatus.PARTIALLY_PUBLISHED, EnumSet.of(PostStatus.ARCHIVED),
+            PostStatus.FAILED, EnumSet.of(PostStatus.ARCHIVED)
+    );
+
     // В каких статусах пост ещё можно редактировать.
     // После одобрения и публикации текст менять нельзя.
     private static final Set<PostStatus> EDITABLE =
@@ -174,5 +189,80 @@ public class Post {
         // Добавляем в список: благодаря cascade = ALL вариант сохранится вместе с постом.
         variants.add(variant);
         return variant;
+    }
+    
+        // Найти вариант этого поста. Чужой id (даже существующий) → 404.
+    public PostVariant findVariant(UUID variantId) {
+        return variants.stream()
+                .filter(v -> v.getId().equals(variantId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Вариант " + variantId + " не найден"));
+    }
+
+    public void editVariant(PostVariant variant, String body, List<String> hashtags) {
+        requireEditable();
+        variant.edit(body, hashtags);
+    }
+
+    // Снять выбор со всех вариантов площадки (шаг 1 из 2 при смене выбора).
+    public void unselectPlatform(SocialPlatform platform) {
+        requireEditable();
+        variants.stream()
+                .filter(v -> v.getPlatform() == platform)
+                .forEach(PostVariant::unselect);
+    }
+
+    // Выбрать вариант (шаг 2 из 2). Вызывать после unselectPlatform + flush.
+    public void selectVariant(PostVariant variant) {
+        requireEditable();
+        variant.select();
+    }
+
+    // Удалить вариант. orphanRemoval = true → Hibernate сам сделает DELETE.
+    public void removeVariant(PostVariant variant) {
+        requireEditable();
+        variants.remove(variant);
+    }
+
+    // Вариант площадки с наименьшим номером — кандидат на выбор после удаления выбранного.
+    public java.util.Optional<PostVariant> firstVariantOf(SocialPlatform platform) {
+        return variants.stream()
+                .filter(v -> v.getPlatform() == platform)
+                .min(java.util.Comparator.comparingInt(PostVariant::getVariantNo));
+    }
+
+    // ---------- жизненный цикл ----------
+    // Отправить на ревью. Пустой пост ревьюеру не нужен:
+    // должен быть хотя бы один выбранный вариант с текстом.
+    public void submitForReview() {
+        boolean hasPublishable = variants.stream()
+                .anyMatch(v -> v.isSelected() && !v.getBody().isBlank());
+        if (!hasPublishable) {
+            throw new ConflictException("Нет выбранного варианта с текстом — отправлять на ревью нечего");
+        }
+        moveTo(PostStatus.IN_REVIEW);
+    }
+
+    public void approve(Instant now) {
+        moveTo(PostStatus.APPROVED);
+        this.approvedAt = now;
+        // approvedBy заполним, когда появится авторизация (Keycloak).
+    }
+
+    public void requestChanges() {
+        moveTo(PostStatus.CHANGES_REQUESTED);
+    }
+
+    public void archive() {
+        moveTo(PostStatus.ARCHIVED);
+    }
+
+    // Единственное место, где меняется status: здесь проверяется таблица переходов.
+    private void moveTo(PostStatus target) {
+        Set<PostStatus> allowed = TRANSITIONS.getOrDefault(status, Set.of());
+        if (!allowed.contains(target)) {
+            throw new ConflictException("Нельзя перевести пост из " + status + " в " + target);
+        }
+        this.status = target;
     }
 }
