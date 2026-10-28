@@ -1,0 +1,55 @@
+server:
+  # Каждый микросервис на своём порту: api = 8081.
+  port: 8081
+
+spring:
+  application:
+    name: api
+
+  # Виртуальные потоки Java 21+: каждый запрос в лёгком потоке.
+  threads:
+    virtual:
+      enabled: true
+
+  datasource:
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5433}/rabbot
+    # Сервис работает под ролью приложения: только SELECT/INSERT/UPDATE/DELETE.
+    # Схему меняет только Flyway (rabbot_migrator).
+    username: rabbot_app
+    # Пароль берётся из переменной окружения RABBOT_APP_PASSWORD (как в .env).
+    password: ${RABBOT_APP_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+
+  jpa:
+    # Не держать соединение с БД открытым до конца HTTP-запроса.
+    open-in-view: false
+    hibernate:
+      # Hibernate не трогает схему: таблицы создаёт Flyway.
+      ddl-auto: none
+    properties:
+      hibernate:
+        # Все таблицы лежат в схеме core.
+        default_schema: core
+        # Время в БД храним и читаем в UTC.
+        jdbc:
+          time_zone: UTC
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # Внутри тега — порядок GET, POST, PUT, PATCH, DELETE.
+    operations-sorter: method
+    tags-sorter: alpha
+    # Помнить введённый X-Tenant-Id после перезагрузки страницы.
+    persist-authorization: true
+  # Показывать в схемах только наш API, без служебных путей.
+  paths-to-match: /api/**

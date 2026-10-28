@@ -8,6 +8,7 @@ import dev.rabbot.api.dto.response.PostSummaryResponse;
 import dev.rabbot.api.enums.PostStatus;
 import dev.rabbot.api.services.PostService;
 import dev.rabbot.api.utils.CurrentTenant;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -22,11 +23,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
+import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1")
+@Tag(name = "Посты", description = "Посты бренда и их варианты под площадки")
 public class PostController {
 
     private final PostService postService;
@@ -37,6 +40,7 @@ public class PostController {
 
     // GET /api/v1/brands/{brandId}/posts?status=IN_REVIEW&page=0&size=20
     @GetMapping("/brands/{brandId}/posts")
+    @Operation(summary = "Посты бренда", description = "Без вариантов. Фильтр по статусу, сортировка по updatedAt")
     public PageResponse<PostSummaryResponse> listByBrand(
             @CurrentTenant UUID tenantId,
             @PathVariable UUID brandId,
@@ -47,12 +51,14 @@ public class PostController {
     }
 
     @GetMapping("/posts/{id}")
+    @Operation(summary = "Пост с вариантами")
     public PostResponse get(@CurrentTenant UUID tenantId, @PathVariable UUID id) {
         return postService.get(tenantId, id);
     }
 
     // POST /api/v1/brands/{brandId}/posts → 201 + Location: /api/v1/posts/{id}
     @PostMapping("/brands/{brandId}/posts")
+    @Operation(summary = "Создать черновик", description = "Сразу с вариантами; первый вариант каждой площадки выбирается")
     public ResponseEntity<PostResponse> create(@CurrentTenant UUID tenantId,
                                                @PathVariable UUID brandId,
                                                @Valid @RequestBody PostCreateRequest request,
@@ -63,6 +69,7 @@ public class PostController {
     }
 
     @PatchMapping("/posts/{id}")
+    @Operation(summary = "Переименовать", description = "Нужна version из GET; устаревшая → 409")
     public PostResponse update(@CurrentTenant UUID tenantId,
                                @PathVariable UUID id,
                                @Valid @RequestBody PostUpdateRequest request) {
