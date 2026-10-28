@@ -7,13 +7,16 @@ import dev.rabbot.api.dto.request.VariantTextRequest;
 import dev.rabbot.api.dto.response.PageResponse;
 import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.PostSummaryResponse;
+import dev.rabbot.api.dto.response.RevisionResponse;
 import dev.rabbot.api.model.Brand;
 import dev.rabbot.api.model.Post;
+import dev.rabbot.api.model.PostRevision;
 import dev.rabbot.api.model.PostVariant;
 import dev.rabbot.api.enums.PostStatus;
 import dev.rabbot.api.enums.SocialPlatform;
 import dev.rabbot.api.repository.BrandRepository;
 import dev.rabbot.api.repository.PostRepository;
+import dev.rabbot.api.repository.PostRevisionRepository;
 import dev.rabbot.api.services.PostService;
 import dev.rabbot.api.utils.ConflictException;
 import dev.rabbot.api.utils.NotFoundException;
@@ -28,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -38,17 +42,20 @@ public class PostServiceImpl implements PostService {
     private final PostMapper postMapper;
     private final EntityManager entityManager;
     private final PostLoader postLoader;
+    private final PostRevisionRepository revisionRepository;
 
     public PostServiceImpl(PostRepository postRepository,
                            BrandRepository brandRepository,
                            PostMapper postMapper,
                            EntityManager entityManager,
-                           PostLoader postLoader) {
+                           PostLoader postLoader,
+                           PostRevisionRepository revisionRepository) {
         this.postRepository = postRepository;
         this.brandRepository = brandRepository;
         this.postMapper = postMapper;
         this.entityManager = entityManager;
         this.postLoader = postLoader;
+        this.revisionRepository = revisionRepository;
     }
 
     @Override
@@ -93,6 +100,8 @@ public class PostServiceImpl implements PostService {
         // Один save: варианты сохранятся каскадом (cascade = ALL).
         // flush — чтобы БД вернула created_at, char_count и т. п. до ответа.
         Post saved = postRepository.saveAndFlush(post);
+        // Варианты уже в БД — можно ссылаться на них из ревизий.
+        saved.getVariants().forEach(v -> revisionRepository.save(PostRevision.byUser(v)));
         return postMapper.toResponse(saved);
     }
 
@@ -113,11 +122,14 @@ public class PostServiceImpl implements PostService {
         return postMapper.toResponse(postRepository.saveAndFlush(post));
     }
 
-        @Override
+    @Override
     @Transactional
     public PostResponse addVariant(UUID tenantId, UUID postId, int version, VariantRequest request) {
         Post post = loadForChange(tenantId, postId, version);
-        post.addVariant(request.platform(), request.body(), request.hashtags());
+        PostVariant variant = post.addVariant(request.platform(), request.body(), request.hashtags());
+        // Сначала INSERT варианта, потом ревизия со ссылкой на него.
+        entityManager.flush();
+        revisionRepository.save(PostRevision.byUser(variant));
         return postLoader.saveAndReload(post);
     }
 
@@ -127,7 +139,14 @@ public class PostServiceImpl implements PostService {
                                     VariantTextRequest request) {
         Post post = loadForChange(tenantId, postId, version);
         PostVariant variant = post.findVariant(variantId);
+        String before = variant.getBody();
+
         post.editVariant(variant, request.body(), request.hashtags());
+
+        // Ревизия только при изменении текста. Правка одних хэштегов историю не засоряет.
+        if (!before.equals(variant.getBody())) {
+            revisionRepository.save(PostRevision.byUser(variant));
+        }
         return postLoader.saveAndReload(post);
     }
 
@@ -165,6 +184,27 @@ public class PostServiceImpl implements PostService {
             post.firstVariantOf(platform).ifPresent(post::selectVariant);
         }
         return postLoader.saveAndReload(post);
+    }
+
+    @Override
+    public List<RevisionResponse> revisions(UUID tenantId, UUID postId, UUID variantId) {
+        // Пост — свой (tenant), вариант — этого поста. Иначе 404.
+        Post post = postLoader.findWithVariantsOrThrow(tenantId, postId);
+        PostVariant variant = post.findVariant(variantId);
+
+        return revisionRepository.findTop50ByVariant_IdOrderByIdDesc(variant.getId())
+                .stream()
+                .map(r -> new RevisionResponse(
+                        r.getId(),
+                        r.getBody(),
+                        // codePointCount — как char_length в PostgreSQL:
+                        // эмодзи считается одним символом, а не двумя.
+                        r.getBody().codePointCount(0, r.getBody().length()),
+                        r.getAuthorType(),
+                        r.getAuthorId(),
+                        r.getModel(),
+                        r.getCreatedAt()))
+                .toList();
     }
 
     // ---------- помощники ----------

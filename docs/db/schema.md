@@ -8,7 +8,7 @@ PostgreSQL 17, база `rabbot`, схема `core`. Миграции — [`db/m
 erDiagram
     tenant ||--o{ app_user : "сотрудники"
     tenant ||--o{ brand : "бренды"
-    tenant ||--o{ llm_budget : "бюджет LLM"
+    tenant ||--o{ llm_quota : "лимит токенов LLM"
     app_user ||--o{ notification_setting : "уведомления"
     brand ||--o{ brand_example : "примеры для RAG"
     brand ||--o{ channel : "аккаунты соцсетей"
@@ -92,7 +92,9 @@ erDiagram
 | V6 | `post`, `post_variant`, `post_revision`, `media_asset`, `reel_scene`, `review`, `brand_check` | Контент и его жизненный цикл |
 | V7 | `publication` (партиционирована), `publication_attempt` | Расписание и попытки публикации |
 | V8 | `outbox_event`, `processed_message` | Transactional outbox и идемпотентные консьюмеры |
-| V9 | `llm_budget`, `audit_log` | Бюджет облачных LLM, журнал действий |
+| V9 | `llm_budget`, `audit_log` | Лимит облачных LLM (до V11 — в долларах), журнал действий |
+| V10 | — | Удалены тарифы и пробный период: проект бесплатный |
+| V11 | `llm_quota` | Лимит облачных LLM в токенах вместо долларов |
 
 ## Соглашения
 
