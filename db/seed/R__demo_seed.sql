@@ -17,7 +17,7 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO notification_setting (user_id, event_type, channel, enabled)
 SELECT '00000000-0000-0000-0001-000000000001', e, c, NOT (e = 'PRODUCT_NEWS' OR (e = 'TRENDS_DIGEST' AND c = 'EMAIL'))
-FROM unnest(ARRAY ['POST_NEEDS_REVIEW','PUBLICATION_FAILED','LLM_BUDGET_EXCEEDED','TRENDS_DIGEST','PRODUCT_NEWS']) e,
+FROM unnest(ARRAY ['POST_NEEDS_REVIEW','PUBLICATION_FAILED','LLM_LIMIT_EXCEEDED','TRENDS_DIGEST','PRODUCT_NEWS']) e,
      unnest(ARRAY ['EMAIL','TELEGRAM']) c
 ON CONFLICT DO NOTHING;
 
@@ -103,7 +103,7 @@ FROM (VALUES ('00000000-0000-0000-0007-000000000001', '00000000-0000-0000-0004-0
          AS v(variant_id, channel_id, at, status, published_at, ext)
 WHERE NOT EXISTS (SELECT 1 FROM publication p WHERE p.tenant_id = '00000000-0000-0000-0000-000000000001');
 
--- Бюджет LLM на текущий месяц
-INSERT INTO llm_budget (tenant_id, period_month, limit_usd, spent_usd)
-VALUES ('00000000-0000-0000-0000-000000000001', date_trunc('month', now())::date, 50.00, 12.40)
+-- Лимит токенов облачных LLM на текущий месяц
+INSERT INTO llm_quota (tenant_id, period_month, limit_tokens, used_tokens)
+VALUES ('00000000-0000-0000-0000-000000000001', date_trunc('month', now())::date, 5000000, 1250000)
 ON CONFLICT DO NOTHING;
