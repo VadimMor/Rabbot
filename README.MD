@@ -1,3 +1,5 @@
+<a href="https://github.com/VadimMor/Rabbot/actions/workflows/ci.yml"><img src="https://github.com/VadimMor/Rabbot/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+
 <p align="center">
   <img src="docs/assets/logo.svg" width="128" alt="Rabbot logo">
 </p>
