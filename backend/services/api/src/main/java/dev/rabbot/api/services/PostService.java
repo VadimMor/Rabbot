@@ -7,9 +7,11 @@ import dev.rabbot.api.dto.request.VariantTextRequest;
 import dev.rabbot.api.dto.response.PageResponse;
 import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.PostSummaryResponse;
+import dev.rabbot.api.dto.response.RevisionResponse;
 import dev.rabbot.api.enums.PostStatus;
 
 import java.util.UUID;
+import java.util.List;
 
 public interface PostService {
 
@@ -30,4 +32,6 @@ public interface PostService {
     PostResponse selectVariant(UUID tenantId, UUID postId, UUID variantId, int version);
 
     PostResponse deleteVariant(UUID tenantId, UUID postId, UUID variantId, int version);
+
+    List<RevisionResponse> revisions(UUID tenantId, UUID postId, UUID variantId);
 }

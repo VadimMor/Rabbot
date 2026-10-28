@@ -3,11 +3,13 @@ package dev.rabbot.api.controller;
 import dev.rabbot.api.dto.request.VariantRequest;
 import dev.rabbot.api.dto.request.VariantTextRequest;
 import dev.rabbot.api.dto.response.PostResponse;
+import dev.rabbot.api.dto.response.RevisionResponse;
 import dev.rabbot.api.services.PostService;
 import dev.rabbot.api.utils.CurrentTenant;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
+import java.util.List;
 
 // Варианты — вложенный ресурс поста: /posts/{postId}/variants/...
 // Каждая операция требует ?version=N — версию поста, которую видел клиент.
@@ -66,5 +69,13 @@ public class PostVariantController {
                                @PathVariable UUID variantId,
                                @RequestParam int version) {
         return postService.deleteVariant(tenantId, postId, variantId, version);
+    }
+
+    // История текста варианта. version не нужна: только чтение.
+    @GetMapping("/{variantId}/revisions")
+    public List<RevisionResponse> revisions(@CurrentTenant UUID tenantId,
+                                            @PathVariable UUID postId,
+                                            @PathVariable UUID variantId) {
+        return postService.revisions(tenantId, postId, variantId);
     }
 }
