@@ -32,6 +32,11 @@ dependencies {
     // JSON. Jackson 3 (пакет tools.jackson), как во всём Spring Boot 4.
     implementation("tools.jackson.core:jackson-databind")
 
+    // Relay отправляет события через KafkaTemplate.
+    implementation("org.springframework.kafka:spring-kafka")
+    implementation("org.slf4j:slf4j-api")
+
+
     // ---------- тесты: настоящий PostgreSQL с нашими миграциями ----------
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-jdbc")
@@ -43,6 +48,8 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testRuntimeOnly("org.postgresql:postgresql")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.springframework.boot:spring-boot-starter-kafka")
+    testImplementation("org.testcontainers:testcontainers-kafka")
 }
 
 tasks.test {
