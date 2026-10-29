@@ -15,3 +15,7 @@ project(":api").projectDir = file("services/api")
 // Контракты событий Kafka: общие для всех сервисов.
 include(":events")
 project(":events").projectDir = file("libs/events")
+
+// Transactional outbox: запись событий в БД в той же транзакции, что и данные.
+include(":outbox")
+project(":outbox").projectDir = file("libs/outbox")

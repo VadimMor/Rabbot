@@ -1,0 +1,8 @@
+# Тестовое приложение библиотеки: только БД и миграции.
+spring:
+  flyway:
+    # libs/outbox → три уровня вверх → корень репозитория.
+    locations: filesystem:../../../db/migration
+    schemas: core
+    default-schema: core
+    create-schemas: true
