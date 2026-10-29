@@ -40,3 +40,16 @@ management:
     web:
       exposure:
         include: health,info
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    # Внутри тега — порядок GET, POST, PUT, PATCH, DELETE.
+    operations-sorter: method
+    tags-sorter: alpha
+    # Помнить введённый X-Tenant-Id после перезагрузки страницы.
+    persist-authorization: true
+  # Показывать в схемах только наш API, без служебных путей.
+  paths-to-match: /api/**

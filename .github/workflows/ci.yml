@@ -61,7 +61,7 @@ jobs:
       # build = компиляция + тесты + сборка jar.
       # Docker на ubuntu-latest уже есть, поэтому Testcontainers работает без настройки.
       - name: Build and test
-        run: gradle :api:build --no-daemon --stacktrace
+        run: gradle build --no-daemon --stacktrace
 
       # Короткая сводка по тестам прямо на странице запуска (вкладка Summary).
       - name: Test summary

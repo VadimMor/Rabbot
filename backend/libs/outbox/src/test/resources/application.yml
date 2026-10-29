@@ -1,0 +1,23 @@
+# Тестовое приложение библиотеки: только БД и миграции.
+spring:
+  flyway:
+    # libs/outbox → три уровня вверх → корень репозитория.
+    locations: filesystem:../../../db/migration
+    schemas: core
+    default-schema: core
+    create-schemas: true
+  kafka:
+    producer:
+      properties:
+        # Не ждать метаданные топика минуту, если с ним что-то не так.
+        max.block.ms: 5000
+    consumer:
+      auto-offset-reset: earliest
+
+rabbot:
+  outbox:
+    relay:
+      enabled: true
+      # Фоновый проход в тестах не нужен: вызываем relayBatch() вручную.
+      poll-interval: 1h
+      max-attempts: 3

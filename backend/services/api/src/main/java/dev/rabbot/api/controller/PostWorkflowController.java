@@ -6,6 +6,8 @@ import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.ReviewResponse;
 import dev.rabbot.api.services.PostWorkflowService;
 import dev.rabbot.api.utils.CurrentTenant;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,6 +25,7 @@ import java.util.UUID;
 // а сервер проверяет каждый переход.
 @RestController
 @RequestMapping("/api/v1/posts/{postId}")
+@Tag(name = "Ревью постов", description = "Жизненный цикл: черновик → ревью → одобрен / на доработку → архив")
 public class PostWorkflowController {
 
     private final PostWorkflowService workflowService;
@@ -32,6 +35,7 @@ public class PostWorkflowController {
     }
 
     @PostMapping("/submit")
+    @Operation(summary = "Отправить на ревью", description = "Нужен хотя бы один выбранный вариант с текстом")
     public PostResponse submit(@CurrentTenant UUID tenantId,
                                @PathVariable UUID postId,
                                @RequestParam int version) {
@@ -40,6 +44,7 @@ public class PostWorkflowController {
 
     // Тело необязательно: одобрить можно и без комментария.
     @PostMapping("/approve")
+    @Operation(summary = "Одобрить", description = "Комментарий необязателен. После одобрения текст не редактируется")
     public PostResponse approve(@CurrentTenant UUID tenantId,
                                 @PathVariable UUID postId,
                                 @RequestParam int version,
@@ -49,6 +54,7 @@ public class PostWorkflowController {
     }
 
     @PostMapping("/request-changes")
+    @Operation(summary = "Вернуть на доработку", description = "Комментарий обязателен")
     public PostResponse requestChanges(@CurrentTenant UUID tenantId,
                                        @PathVariable UUID postId,
                                        @RequestParam int version,
@@ -57,6 +63,7 @@ public class PostWorkflowController {
     }
 
     @PostMapping("/archive")
+    @Operation(summary = "В архив")
     public PostResponse archive(@CurrentTenant UUID tenantId,
                                 @PathVariable UUID postId,
                                 @RequestParam int version) {
@@ -64,6 +71,7 @@ public class PostWorkflowController {
     }
 
     @GetMapping("/reviews")
+    @Operation(summary = "История ревью", description = "Новые решения первыми")
     public List<ReviewResponse> reviews(@CurrentTenant UUID tenantId, @PathVariable UUID postId) {
         return workflowService.reviews(tenantId, postId);
     }

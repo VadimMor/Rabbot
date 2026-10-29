@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.UUID;
 
@@ -28,6 +30,7 @@ import java.util.UUID;
 // только приём параметров и вызов сервиса.
 @RestController
 @RequestMapping("/api/v1/brands")
+@Tag(name = "Бренды", description = "Профиль бренда: аудитория, тон, запрещённые слова, правила стиля")
 public class BrandController {
 
     private final BrandService brandService;
@@ -39,6 +42,7 @@ public class BrandController {
     // GET /api/v1/brands?page=0&size=20
     // @Min/@Max на параметрах Spring проверяет сам (встроенная валидация методов).
     @GetMapping
+    @Operation(summary = "Получить список брендов", description = "Возвращает список брендов с пагинацией")
     public PageResponse<BrandResponse> list(
             @CurrentTenant UUID tenantId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
@@ -48,12 +52,14 @@ public class BrandController {
 
     // GET /api/v1/brands/{id}
     @GetMapping("/{id}")
+    @Operation(summary = "Получить бренд по ID", description = "Возвращает бренд по его уникальному идентификатору")
     public BrandResponse get(@CurrentTenant UUID tenantId, @PathVariable UUID id) {
         return brandService.get(tenantId, id);
     }
 
     // POST /api/v1/brands → 201 Created + заголовок Location с адресом нового бренда.
     @PostMapping
+    @Operation(summary = "Создать бренд", description = "Создаёт новый бренд")
     public ResponseEntity<BrandResponse> create(
             @CurrentTenant UUID tenantId,
             @Valid @RequestBody BrandRequest request,
@@ -67,6 +73,7 @@ public class BrandController {
 
     // PUT /api/v1/brands/{id}: полная замена полей бренда.
     @PutMapping("/{id}")
+    @Operation (summary = "Обновить бренд", description = "Обновляет существующий бренд по его уникальному идентификатору")
     public BrandResponse update(
             @CurrentTenant UUID tenantId,
             @PathVariable UUID id,
@@ -76,6 +83,7 @@ public class BrandController {
 
     // DELETE /api/v1/brands/{id} → 204 No Content.
     @DeleteMapping("/{id}")
+    @Operation(summary = "Удалить бренд", description = "Удаляет бренд по его уникальному идентификатору")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@CurrentTenant UUID tenantId, @PathVariable UUID id) {
         brandService.delete(tenantId, id);

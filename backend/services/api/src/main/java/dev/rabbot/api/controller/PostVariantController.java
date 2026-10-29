@@ -6,6 +6,8 @@ import dev.rabbot.api.dto.response.PostResponse;
 import dev.rabbot.api.dto.response.RevisionResponse;
 import dev.rabbot.api.services.PostService;
 import dev.rabbot.api.utils.CurrentTenant;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,6 +29,7 @@ import java.util.List;
 // Без неё Spring вернёт 400 (обязательный параметр).
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/variants")
+@Tag(name = "Варианты постов", description = "Тексты поста под площадки. Каждая правка требует ?version= поста")
 public class PostVariantController {
 
     private final PostService postService;
@@ -37,6 +40,7 @@ public class PostVariantController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Добавить вариант", description = "Номер — следующий для площадки")
     public PostResponse add(@CurrentTenant UUID tenantId,
                             @PathVariable UUID postId,
                             @RequestParam int version,
@@ -45,6 +49,7 @@ public class PostVariantController {
     }
 
     @PutMapping("/{variantId}")
+    @Operation(summary = "Изменить текст и хэштеги", description = "Новый текст сохраняется в истории ревизий")
     public PostResponse edit(@CurrentTenant UUID tenantId,
                              @PathVariable UUID postId,
                              @PathVariable UUID variantId,
@@ -54,6 +59,7 @@ public class PostVariantController {
     }
 
     @PostMapping("/{variantId}/select")
+    @Operation(summary = "Выбрать для публикации", description = "С остальных вариантов площадки выбор снимается")
     public PostResponse select(@CurrentTenant UUID tenantId,
                                @PathVariable UUID postId,
                                @PathVariable UUID variantId,
@@ -64,6 +70,7 @@ public class PostVariantController {
     // Возвращаем 200 с постом, а не 204: клиенту нужна новая version
     // и, возможно, новый выбранный вариант.
     @DeleteMapping("/{variantId}")
+    @Operation(summary = "Удалить вариант", description = "Если он был выбран — выбирается вариант с наименьшим номером")
     public PostResponse delete(@CurrentTenant UUID tenantId,
                                @PathVariable UUID postId,
                                @PathVariable UUID variantId,
@@ -73,6 +80,7 @@ public class PostVariantController {
 
     // История текста варианта. version не нужна: только чтение.
     @GetMapping("/{variantId}/revisions")
+    @Operation(summary = "История текста", description = "Последние 50 ревизий, новые первыми")
     public List<RevisionResponse> revisions(@CurrentTenant UUID tenantId,
                                             @PathVariable UUID postId,
                                             @PathVariable UUID variantId) {

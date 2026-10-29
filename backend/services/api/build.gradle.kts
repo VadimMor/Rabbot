@@ -31,6 +31,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     // /actuator/health — проверка, что сервис жив (пригодится для Kubernetes).
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    // OpenAPI 3 + Swagger UI. Ветка 3.x — для Spring Boot 4.
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.0")
 
     // JDBC-драйвер PostgreSQL нужен только во время работы.
     runtimeOnly("org.postgresql:postgresql")
