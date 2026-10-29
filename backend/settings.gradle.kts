@@ -10,3 +10,8 @@ rootProject.name = "rabbot"
 // Каждый новый сервис добавляется сюда двумя такими строками.
 include(":api")
 project(":api").projectDir = file("services/api")
+
+// ---------- библиотеки ----------
+// Контракты событий Kafka: общие для всех сервисов.
+include(":events")
+project(":events").projectDir = file("libs/events")
