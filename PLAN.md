@@ -8,7 +8,7 @@
 - [x] PostgreSQL
 - [x] ClickHouse
 - [ ] Qdrant
-- [ ] Redis
+- [x] Redis
 - [ ] MinIO
 - [ ] Temporal
 - [ ] Keycloak
@@ -17,13 +17,13 @@
 - [ ] Langfuse
 - [ ] vLLM и TEI
 - [x] Docker Compose для локальной разработки
-- [ ] CI в GitHub Actions
+- [x] CI в GitHub Actions
 
 ## Этап 2. Каркас приложения
 
 - [x] Gradle multi-project
-- [ ] Библиотека контрактов событий
-- [ ] Библиотека transactional outbox
+- [x] Библиотека контрактов событий
+- [x] Библиотека transactional outbox
 - [ ] Библиотека безопасности (OIDC, tenant)
 - [ ] Сервисы: gateway, api, ingestor, enricher, generator, llm-gateway, scheduler, publisher, analytics
 - [x] Модель данных и миграции Flyway
@@ -56,7 +56,7 @@
 
 ## Этап 5. Бренд
 
-- [ ] Профиль бренда
+- [x] Профиль бренда
 - [ ] Загрузка примеров постов в Qdrant
 - [ ] RAG по примерам
 - [ ] Brand-checker
